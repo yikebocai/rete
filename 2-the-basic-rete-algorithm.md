@@ -22,7 +22,7 @@ w8:(B3 ^on table)
 w9:(B3 ^color red) 
 </code></pre>
 
-为了简化我们的描述，我们会假设WMEs是三元组的形式，把它们写成(identifier ^attribute value)。“identifier","attribute","value"
+为了简化我们的描述，我们会假设WMEs是三元组的形式，把它们写成`(identifier ^attribute value)`。“identifier","attribute","value"
 对匹配器来说没有特殊的含义。我们有时把”identifier"缩写成`id`，”attribute“缩写成`attr`。我们会把这部分作为一个WME的三个域，
 比如WME(B1 ^on B2)有B1在它的id域里。每个域包含一个符号。什么符号是被允许的唯一约束是它们都必须是常量：WMEs中不允许有变量。
 Rete不要求特殊表示--众多的Rete版本中支持其它已经实现的表示，我们会在2.11节讨论这些。在这里我们选择该特殊形式是因为：

@@ -10,14 +10,24 @@
 生产区（Production Memeory，简称PM）和工作区（Working Memory，简称WM）。它们中的每一个随着时间可以逐渐地改变。工作区是一组
 代表系统当前形势的事实（Fact）--外部世界的状态和（或者）系统自己内部要解决问题的状态。WM中每个元素被叫做工作区元素（Working
 Memory Element,简称WME）。在`blocks world`系统里，比如说，工作区也许由下面的WMEs（记为w1-w9.）组成：
- 
- > w1:(B1 ^on B2)      
- > w2:(B1 ^on B3)        
- > w3:(B1 ^color red)     
- > w4:(B2 ^on table)     
- > w5:(B2 ^left-of B3) 
- > w6:(B2 ^color blue) 
- > w7:(B3 ^left-of B4)
- > w8:(B3 ^on table) 
- > w9:(B3 ^color red) 
+<pre><code>
+w1:(B1 ^on B2)
+w2:(B1 ^on B3)
+w3:(B1 ^color red)
+w4:(B2 ^on table)
+w5:(B2 ^left-of B3)
+w6:(B2 ^color blue) 
+w7:(B3 ^left-of B4)
+w8:(B3 ^on table) 
+w9:(B3 ^color red) 
+</code></pre>
+
+为了简化我们的描述，我们会假设WMEs是三元组的形式，把它们写成(identifier ^attribute value)。“identifier","attribute","value"
+对匹配器来说没有特殊的含义。我们有时把”identifier"缩写成`id`，”attribute“缩写成`attr`。我们会把这部分作为一个WME的三个域，
+比如WME(B1 ^on B2)有B1在它的id域里。每个域包含一个符号。什么符号是被允许的唯一约束是它们都必须是常量：WMEs中不允许有变量。
+Rete不要求特殊表示--众多的Rete版本中支持其它已经实现的表示，我们会在2.11节讨论这些。在这里我们选择该特殊形式是因为：
+* 它非常简单
+* 对WMEs这种形式的约束并没有带来表示能力的丧失，由于其它更少约束的表示能够被直接地、机械地转换成这种形式，我们会在2.11节看到它
+* 试验台系统在本论文中随后描述使用这种表示
+
  

@@ -9,9 +9,11 @@
 在开始我们的Rete讨论之前，先回顾下一些基本的术语和记法。Rete（通常发音为`REET`或者`REE-tee`，源自拉丁语中网络的意思）涉及
 生产区（Production Memeory，简称PM）和工作区（Working Memory，简称WM）。它们中的每一个随着时间可以逐渐地改变。工作区是一组
 代表系统当前形势的事实（Fact）--外部世界的状态和（或者）系统自己内部要解决问题的状态。WM中每个元素被叫做工作区元素（Working
-Memory Element,简称WME）。在`blocks world`系统里，比如说，工作区也许由下面的WMEs（记为w1-w9）组成：
-w1:(B1 ^on B2)      w6:(B2 ^color blue)
-w2:(B1 ^on B3)      w7:(B3 ^left-of B4)
-w3:(B1 ^color red)  w8:(B3 ^on table)
-w4:(B2 ^on table)   w9:(B3 ^color red)
-w5:(B2 ^left-of B3)
+Memory Element,简称WME）。在`blocks world`系统里，比如说，工作区也许由下面的WMEs（记为w1-w9.）组成：
+<div>
+ w1:(B1 ^on B2)      w6:(B2 ^color blue) <p>
+ w2:(B1 ^on B3)      w7:(B3 ^left-of B4) <p>
+ w3:(B1 ^color red)  w8:(B3 ^on table)   <p>
+ w4:(B2 ^on table)   w9:(B3 ^color red)  <p>
+ w5:(B2 ^left-of B3)                     <p>
+</div>

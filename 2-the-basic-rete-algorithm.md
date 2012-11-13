@@ -128,4 +128,55 @@ Rete的实现可以解释或编译。在解释版本中，网络的描述仅被�
 不存在），2.8节展示否定结合（测试WME组合的不存在）如何被处理的。然后我们在2.9节给出几种实现说明，并在2.10节纵览一些过去
 这些年其它一些Rete的优化。最后，在2.11节讨论一下Rete算法的普遍性，包含它对更少WME限制表示的适应性。
 
+##2.2 Alpha网络实现
+当一个WME被添加到工作区后，alpha网络会在上面执行必要的常量（或内在条件）测试并且把它存储到一个或更多合适的alpha存储区。这
+里有几种发现合适alpha存储区的方法。
+
+###2.2.1 数据流网络
+原始并且可能大部分直接的方法是用一个简单的数据流网络。图2.3给出了一个只有10个条件（C1-C10）的小型规则系统的网络示例。这个
+网络的构成如下所述。对每一个条件，让T1，...，Tk代表它的常量测试，可以按任何顺序排列（通常的方式是按条件源文本从左到右排列）。
+从项节点开始，我们构建一个按照这个顺序对应T1,...,Tk这k个节点的路径。这些节点在文献上通常被称作`常量测试`或者`单输入节点`。
+当我们构建这个路径时，每当可能的话我们共享（比如，重用）已经存在的、包含同样的测试的节点（对其它节点来说）。最后，我们把
+这个条件的alpha存储区当作对Tk的节点输出。
+
+请注意这个构建仅关注条件中的常量，同时忽略变量。因此，在图2.3中，条件C2和C10即使包含不同的变量还是会共享一个alpha存储区。
+同时也请注意一个条件根本不包含常量测试也是可能的（例如，图中的C9），在这种情况下它的alpha存储区仅是alpha网络中顶结节的子
+节点。
+
+图2.3 使用alpha网络的数据流网络示例
+
+这些节点的每一个仅是一个这样的数据结构，在节点指定被执行的测试，任何节点输出进入可能进入的alpha存储区，一组子节点（其它
+常量测试节点）：
+<pre><code>
+structure constant-test-node:
+   field-to-test:"identifier","attribute","value",or "no-test"
+   thing-the-field-must-equal:symbol
+   output-memory:alpha-memory or nil
+   children:list of constant-test-node
+end
+</code></pre>
+（“no-test”会被在顶节点）当一个WME被添加到工作区，我们仅仅把它填进数据流网络的项端：
+<pre><code>
+  procedure add-wme(w:WME) {dataflow version}
+     constant-test-node-activaction (the-top-node-of-the-alpha-network,w) 
+  end
+
+  procedure constant-test-node-activation (node: constant-test-node; w: WME)
+    if node.eld-to-test 6= 'no-test' then
+       v <-- w.[node.eld-to-test]
+       if v 6= node.thing-the-eld-must-equal then
+          return ffailed the test, so don't propagate any furtherg
+    if node.output-memory 6= nil then
+       alpha-memory-activation (node.output-memory, w) fsee Section 2.3.1g
+    for each c in node.children do constant-test-node-activation (c, w)
+  end
+</code></pre>
+
+上面的描述假设所有的测试都是常量符号的相等测试。像前面所提及的，靠alpha网络执行的测试不限于相等测试。比如，一个条件也许
+要求在WME中的某个属性有一个比7大的数值。为了支持这样的测试，我们将扩展constant-test-node数据结构到包括哪种被执行测试的
+定义，并且相应地修改constant-test-node-activation程序。
+
+###2.2.2 带哈希的数据流网络
+属性
+
  

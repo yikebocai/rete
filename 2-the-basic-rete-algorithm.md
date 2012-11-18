@@ -1,4 +1,4 @@
-#第二章 基本Rete算法
+#第二章 基础Rete算法
 
 既然本论文的大部分工作都以Rete匹配算法为基础，本章主要描述Rete算法。不幸的是，大多数文献中对Rete算法的描述都不够特别明晰，
 这也许是Rete被冠以`极度难懂`的帽子的原因（Perlin，1990b）。为了扭转这种形势，本章将以教程的形式描述Rete，而不是简略地回顾
@@ -206,3 +206,34 @@ hash表很简单。
 仅有8种方法能够生成(v1 ^v2 v3)匹配的条件。因此，给定一个WME w，去确定w应该添加到哪个alpha存储，我们仅需检查这8种可能哪个
 会真正在系统中。（既然不是任何alpha存储区都会对应有测试和*的组合，一些情况也许根本不会出现）我们在hash表中存储指向所有系统
 的alpha存储区，根据被测试的特殊的值做索引。执行alpha网络就变成了8种hash表查询的简单匹配：
+<pre><code>
+procedure add-wme (w: WME) fexhaustive hash table versiong
+  let v1, v2, and v3 be the symbols in the three elds of w
+  alpha-mem   lookup-in-hash-table (v1,v2,v3)
+  if alpha-mem 6= \not-found" then alpha-memory-activation (alpha-mem, w)
+  alpha-mem   lookup-in-hash-table (v1,v2,)
+  if alpha-mem 6= \not-found" then alpha-memory-activation (alpha-mem, w)
+  alpha-mem   lookup-in-hash-table (v1,,v3)
+  if alpha-mem 6= \not-found" then alpha-memory-activation (alpha-mem, w)
+  ...
+  alpha-mem   lookup-in-hash-table (,,)
+  if alpha-mem 6= \not-found" then alpha-memory-activation (alpha-mem, w)
+end
+</pre></code>
+
+上面算法的优雅取决于两个假设：WMEs三元组的范式并且没有不等于的测试。第一个假设能够稍微被放松：为了处理r元组的WMEs，我们能够
+使用2^r次hash表查询。当然，只有在r非常小时才能工作的很好。有两个方法去消除第二个假设：
+ * 可以用上面2.2.1章节中描述的小数据流网络形式来表示hash表查询的结果，而不是用alpha存储区。所有常量等于测试用hash处理，而
+其它测试用像之前的常量测试节点来处理。重要的是，使用2.2.1章节数据流网络的查询结果，移动所有等于测试到网络的上半部分其它
+测试到下半部分，然后用8种hash查询替换掉上半部分
+ * 用网络的beta部分代替alpha部分来处理不等于测试。当然，在beta部分而不是alpha部分执行一些常量（或内置条件）测试对于Rete
+的实现也是可能的。这导致alpha网络几乎不再重要，并且丝毫不会增加多少beta网络的复杂性。然后，当不同规则有同一个条件时它减少
+了这些测试被共享的可能性。(这个正是该理念中实现的途径）。
+
+不管是2.2.2章节中的数据流加hash的实现还是2.2.3章节中的穷举hash表查询实现，alpha网络都是非常高效的，工作区的每次变更都几乎
+是常量时间运行。网络的beta部分的消耗在Sora系统中占了大部分，并且之前的研究已经在OPS5中被证实。本章大部分（并且该理论的大
+分）因此也会处理网络的beta部分。
+
+##2.3 存储节点实现
+
+

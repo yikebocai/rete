@@ -219,7 +219,7 @@ procedure add-wme (w: WME) fexhaustive hash table versiong
   alpha-mem   lookup-in-hash-table (,,)
   if alpha-mem 6= \not-found" then alpha-memory-activation (alpha-mem, w)
 end
-</pre></code>
+</code></pre>
 
 上面算法的优雅取决于两个假设：WMEs三元组的范式并且没有不等于的测试。第一个假设能够稍微被放松：为了处理r元组的WMEs，我们能够
 使用2^r次hash表查询。当然，只有在r非常小时才能工作的很好。有两个方法去消除第二个假设：

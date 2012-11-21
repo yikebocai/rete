@@ -45,9 +45,9 @@ Rete不要求特殊表示--众多的Rete版本中支持其它已经实现的表�
 ”积木世界“例子中，下面的规则可以被用作的查找红方块左边两个或更多的方块：
 <pre><code>
 (find-stack-of-two-blocks-to-the-left-of-a-red-block
-  (<x> ^on <y>)
-  (<y> ^left-of <z>)
-  (<z> ^color red)
+  (x ^on y)
+  (y ^left-of z)
+  (z ^color red)
  -->
   ... RHS ...
 )
@@ -246,9 +246,9 @@ WMEs的序列--特别的是，满足一些规则前k个条件（具有一致变�
 操作上靠强加一个索引结构在寄存器上来增加效率。究竟如何，考虑一下我们之前的例子：
 <pre><code>
 (find-stack-of-two-blocks-to-the-left-of-a-red-block
- (<x> ^on <y>) /* C1 */
- (<y> ^left-of <z>) /* C2 */
- (<z> ^color red) /* C3 */
+ (x ^on y) /* C1 */
+ (y ^left-of z) /* C2 */
+ (z ^color red) /* C3 */
 -->
  ... RHS ...
 )
@@ -264,8 +264,8 @@ WMEs的序列--特别的是，满足一些规则前k个条件（具有一致变�
 
 注意，我们并不能总是发现一个变量，应该在它的绑定上索引一个寄存器。例如，有时一个条件所有之前的条件是完全无关的：
 <pre><code>
-  (<x> ^on <y>)  /* C1 */
-  (<a> ^left-of <b>) /* C2 */
+  ( x ^on y)  /* C1 */
+  ( a ^left-of b ) /* C2 */
 </code></pre>
 
 在这个例子中，在C2的join节点之前索引beta寄存器没有意义，既然C2没有测试任何在C1中使用过的变量。像这些的案例，我们只是简单

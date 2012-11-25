@@ -300,5 +300,73 @@ token能够被简洁地表示为一对(parent,wi)，在这里parent是在上面�
 出导致重要区别的地方（本理论的实际实现使用了列表形式的tokens和hash寄存器节点）。
 
 ###2.3.1 alpha寄存器实现
+一个WME只包含三个属性：
+<pre><code>
+   structureWME:
+     felds:array[1..3] of symbol
+   end
+</code></pre>
 
+一个alpha寄存器一个WME的列表，外加一个继续者列表（join节点会依附于它):
+<pre><code>
+ structurealpha-memory:
+   items: list of WME
+   successors: list of rete-no de
+ end
+</code></pre>
+
+无论何时一个新的WME通过alpha网络被过滤并且到达一个alpha寄存器时，我们仅简单地把它添加到寄存器的其它WME的
+列表中，并通知每个附属的join节点：
+<pre><code>
+ procedure alpha-memory-activation (no de: alpha-memory, w: WME)
+   insert w at the head of no de.items
+   for eachchildin no de.successorsdoright-activation (child, w)
+end
+</code></pre>
+
+###2.3.2 Beta寄存器实现
+如上所述，使用列表形式的tokens，一个token仅是一对：
+<pre><code>
+ structure token:
+   parent: token {points to the higher token, for items 1...i-1}
+   wme: WME {gives item i}
+end
+</code></pre>
+
+一个beta寄存器存储一个它包含的tokens列表，加上它的子节点（在网络的beta部分的其它节点）的列表。在我们
+给出它的数据结构之前，我们将要再次通过一个swich或case表达式或者一个根据被激活节点的类型索引的跳转表
+对左右激活的程序进行调用。因此，给出一个节点（或者指向它的指针），我们需要能够确定它的类型。如果使用
+多样记录（variant records）来表示节点将非常直接。（一个多样记录是指它能够包含任何不同属性集）。在网络
+的beta部分的每一个节点将会用一个rete-node结构来表示：
+<pre><code>
+ structure rete-node:
+   type: “beta-memory", "join-node", or "p-node" {or other node types we'll see later}
+   children:list of rete-node
+   parent: rete-node {we'll need this "back-link" later}
+   ...(variant part -- other data dep ending on no de type) . . .
+ end
+</code></pre>
+
+既然从现在开始我们描述节点的每一个特殊类型，我们给它的数据结构将仅列出节点类型的扩展信息；
+记住在网络beta部分的所有节点都有type,children和parent属性。并且，我们仅简单地用left-activation
+或者right-activation来表示合适的switch或case表达式或跳转表的使用。
+
+现在转回beta寄存器节点，一个beta寄存器存储的唯一扩展信息是它包含的tokens列表：
+<pre><code>
+ structure beta-memory:
+   items: list of token
+ end
+</code></pre>
+
+无论何时一个beta寄存器被一个新的匹配（由一个存在的token和一些WME组成）通知，我们创建一个token，
+把它添加到beta寄存器的列表中，并通知betta寄存器的每一个子节点：
+<pre><code>
+ procedure beta-memory-left-activation (node: beta-memory, t: token, w: WME)
+   new-token = allocate-memory()
+   new-token.parent = t
+   new-token.wme = w
+   insert new-token at the head of no de.items
+   for each child in node.children do left-activation (child, new-token)
+ end
+</code></pre>
 

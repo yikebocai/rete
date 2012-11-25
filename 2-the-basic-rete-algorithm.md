@@ -370,3 +370,96 @@ end
  end
 </code></pre>
 
+###2.3.3 P节点实现
+我们在这里提到规则节点(p-node)的实现是因为它在一些方面经常和寄存器节点的实现很相似。p节点的实现
+在不同的系统是有变化的，因此在这里我们的讨论尽量会通用一点并且不会给出伪代码。一个p节点可以存储
+tokens，就像beta寄存器一样；这些tokens代表了对规则条件的完全匹配。（在传统规则系统中，在所有p节点
+中的所有tokens集合被表示为冲突集(conflict set)）。在一个左激活中，一个p节点会构建一个新的toekn，
+或者新的完全匹配的相似表示。然后它用一些适合的方式发出新匹配的信号）。
+
+总的来说，一个p节点包含规则对应的定义--规则名称，右手边行为，等。一个p节点也可以包含出现在规则中的
+变量名称的信息。注意，变量名称并没有在本章我们描述的任何Rete节点数据结构中提起过。这是刻意为之--
+当两条规则有同一基本形式但有不同的变量名称的条件时它使节点能够被共享。当变量名称被记在某处时，它
+可能需要靠查找带有变量名称的Rete网络来重新构建规则的LHS。重新构建LSH消除了保存LSH”原始拷贝“的需要，
+这种情况下我们需要随后检查规则。
+
+##2.4 Join节点实现
+像在概述中提出的那样，当一个WME被添加到它的alpha寄存器一个join节点能够递归一个右激活或者当一个token
+被添加它的beta寄存器能够递归一个左激活。在任何一种情况下，会搜索节点的其它寄存器查找和新元素一致的
+变量绑定。如果有任何发现，它们将被传递到join节点的子节点。
+
+一个join节点的数据结构因此必须包含指向它的两个寄存器节点（因此它们能被搜索）的指针，一个任何变量绑定
+一致性测试被执行的定义，和子节点的列表。从数据到所有的节点（在上面的rete节点结构），我们已经有了子节
+点；并且，parent属性给我们一个指向join节点beta寄存器（beta寄存器总是它的父节点）的指针。我们在join
+节点中需要两个额外的属性：
+<pre><code>
+ structure join-node:
+   amem: alpha-memory {points to the alpha memory this node is attached to}
+   tests: list of test-at-join-node
+ end
+</code></pre>
+
+test-at-join-node结构指定两个属性的位置，它们的值必须依次等于几个一贯绑定的值：
+<pre><code>
+ structure test-at-join-node:
+   feld-of-arg1: "identifier", "attribute", or "value"
+   condition-number-of-arg2:integer
+   feld-of-arg2:  "identifier", "attribute", or "value"
+ end
+</code></pre>
+
+Arg1是WME（alpha寄存器）的三个属性之一，而arg2是在规则中匹配一些先前条件的WME的一个属性（比如beta
+寄存器中token的一部分）。举例来说，在我们的示例规则中：
+<pre><code>
+ (find-stack-of-two-blocks-to-the-left-of-a-red-block
+   (x ^on y)      /* C1 */
+   (y ^left-of z) /* C2 */
+   (z ^color red) /* C3 */
+  -->
+   ... RHS ...
+  ),
+</code></pre>
+
+对C3的join节点，检查z的一致性绑定，会有filed-of-arg1="identifier",conditon-number-of-arg2=2和field-of-arg2="value"，
+既然来自join节点的alpha寄存器的WME的id属性的内容必须等于匹配第二个条件的WME的value属性。
+
+在一个右激活（当一个新WME w被添加到alpha寄存器）之上，我们通过beta寄存器并发现任何t-vs-w测试成功的
+token t。任何成功的<t,w>组合被传递到join节点的子节点。相似地，在一个左激活（当一个新token t被添加到
+beta寄存器）之上，，我们通过alpha寄存器并发现文韬任何t-vs-w测试成功的WME。并且，任何成功的<t,w>组合
+被传递给节点的子节点：
+<pre><code>
+ procedure join-no de-right-activation (node: join-node, w: WME)
+   for each t in node.parent.items do {"parent" is the beta memory node}
+     if perform-join-tests (node.tests, t, w)then
+       for each child in node.children do left-activation (child, t, w)
+ end
+ 
+ procedure join-node-left-activation (node: join-node, t: token)
+   for each w in node.amem.items do
+     if perform-join-tests (node.tests, t, w)then
+       for each child in node.children do left-activation (child, t, w)
+ end
+ 
+ function perform-join-tests (tests:list of test-at-join-node, t: token, w: WME)
+ returning b o olean
+   for each this-test in tests do
+     arg1 = w.[this-test.field-of-arg1]
+     {With list-form tokens, the following statement is really a loop}
+     wme2 = the [this-test.condition-number-of-arg2]'th element in t
+     arg2 = wme2.[this-test.field-of-arg2]
+     if arg1 != arg2 then return false
+   return true
+ end
+</code></pre>
+
+我们注意到上面程序的几点。第一，为了能够在网络中为最顶端的join节点使用这些程序--如2.2章节所述的，他们
+都是虚假顶节点的子节点--我们需要虚假顶节点来扮演节点join节点的beta寄存器。我们总是保持一个单一的虚假
+顶端token在虚假项节点中，因此他们在join-node-right-activation程序中迭代完都是同一件事情。第二，伪代码
+假设所有的测试都是测试两个属性的相等。扩展test-at-join-node结构和perform-join-tests程序去支持其它的
+测试（比如，测试一个属性是否小于另外一个）就很简单了。大部分但不是全部Rete实现支持这些测试。最后，伪
+代码假设alpha和beta寄存器没有任何索引，像上面2.3节讨论的那样。如果索引寄存器被使用，那么上面的激活
+程序需要被修改，使用索引而不是简单迭代完所有的tokens或者寄存器节点中的WMEs。例如，如果寄存器做了Hash，
+程序仅会迭代完在合适hash桶中的tokens或WMEs，而不是寄存器中的所有tokens或WMEs。这能够显著地加速Rete
+算法。
+
+###2.4.1 避免重复Tokens

@@ -519,3 +519,124 @@ J2的派生，那么J1必须在J2的前面。靠预先强制排序，我们避�
 移出alpha寄存器的列表。我们需要的是保证合适的顺序并和我们拼接一样。
 
 ##2.5 WME的移除
+当一个WME从工作区删除，我们需要靠删任何包含WME的入口来相应地更新alpha和beta寄存器节点（和p节点中的token）中的条目。
+有几种方法来实现这一点。
+
+在最初的Rete算法中，删除本质上和添加的处理相同的。我们把这种方法叫作`基于再匹配的删除(rematch-based removal)`。基本
+的思路是在解释器中的每个程序增加一个额外的参数，叫做`标签(tag)`，用来指定当前操作添加还是删除的标识。对于删除来说，
+对alpha和beta寄存器节点的程序仅简单地从它们的寄存器中删除指定的WME或token来代替添加。然后程序调用他们的继承者，只是把
+把它们作为一个添加，用`delete`做标签而不是`add`.Join节点的程序同样地处理添加和删除--在这两个案例中，他们用一致性变量
+绑定在合适的寄存器中查找条目并且传递任何匹配（连同add/delete标签）到他们的子节点。因为这个基于再匹配的删除方法处理
+删除和同一解释器程序处理添加大部分相同，因此它简单而优雅。
+
+不幸地是，它也很慢，至少相对其它可能的方法。对基于再匹配的删除来说，既然同一个程序被调用并且每一个做了差不多的工作，
+删除一个WME的代价和添加一个WME的代价其实是一样的。问题是在添加一个新的WME时没有信息可以随后在被删除这个WME时使用。
+有至少三个方法可以在处理删除时使用这些信息。
+
+在`基于扫描的删除(scan-based removal`中，我们不用在join节点重复做变量绑定一致性检查，代替的是仅简单地扫描它们的输出
+寄存器（它们的子beta寄存器，p节点）来查找任何要被删除条目的入口。当一个join节点被右激活作一个WME w的删除时，它仅把w
+传递到它的输出寄存器。寄存器查找token列表中最后一个元素是w的token，删除这些token，并发送这些删除到它的子节点。相似的，
+当一个join节点被左激活作token t的删除时，它把t传递到它的输出寄存器。寄存器查找token列表中父亲是t的token，删除这些token，
+并发送这些删除到它的子节点。注意查找token的父亲是t的这部分程序仅在使用列表形式时才高效而数组形式不行。在Soar系统中使用
+基于扫描的删除比基于再匹配的删除效率提高28%；（Barachini，1991）则产使用轻微变量的这个技术比基于再匹配的删除效率提高10%。
+
+也许处理删除的最快方法是提前精确地记下哪一个要被删除。这个直接的思路是`基于列表的删除`和`基于树的删除`的基础。这个思路
+是在WME和token的数据结构增加额外的指针，因此当一个WME被删除时我们发现所有需要被删除的token--并且仅有这些需要被删除--仅
+靠指针。
+
+在由（Scales，1986）建议的基于列表的删除中，我们在每一个WME w中存储包含w的所有token列表。然后当w被删除，我们仅迭代这个
+列表并删除在上面的每一个token。这个方法的缺点是需要大量额外的存储空间并且潜在的大量额外时间来创建一个token：一个新的
+token（w,...,wi)必须被添加到每个w的列表中。然而，既然创建这个新otken无论如何都需要创建一个新的i个元素的数组，如果token
+是用数组而不是列表来表示的话，那么空间和时间最多都会是一个常量因子。因此，基于列表的删除是那样的实现也许可以被接受。
+论文中没有基于列表的删除的经验报道，因此它是否能在实际中工作的很好（或者甚至它曾被实现过）还不清楚。
+
+在基于树的删除中，在每个WME w上，我们为最后一个w保存所有token的列表。在每个token t上，我们保存t的所有孩子的列表。这些
+指向孩子token的指针允许我们在下面的beta寄存器和条件节点发现所有t的派生。（回头看下2.3章节中是用列表形式的token，这里的
+token集合是一棵树）。现在当w被删除时，我们仅遍历子树（根token和它们的派生token的），并删除在它们里的一切。当然，所有这
+些额外的指针意味着更多的存储空间，外加在WME被添加或token被创建之前的指针设置。然而，从经验上讲，在WME删除期间的时间节省
+远胜提前设置指针的。当作者在Soar系统使用基于树的删除替换掉基于再匹配的删除后，匹配器提升了1.3倍的速度；（Barachini,1991)
+在一个类OPS5的系统中估计有1.25倍的提升。
+
+为了实现基于树的删除，我们每个WME的数据结构让它包括包含WME的所有alpha寄存器的列表，和把WME做为最后一个元素的所有token
+的列表：
+<pre><code>
+  structure WME {revisedfrom version on page 21}
+    felds:array[1..3] of symbol
+    alpha-mems:list of alpha-memory {the ones containing this WME}
+    tokens:list of token {the ones with wme=this WME}
+  end
+</code></pre>
+
+token的数据结构被扩展到包含指向寄存器节点（我们会在下面的delete-token-and-descendents中使用）的指针和它的儿子们的列表：
+<pre><code>
+  structure token {revised from version on page 22}
+    parent: token {points to the higher token, for items 1...i-1}
+    wme: WME {gives item i}
+    node: rete-node {points to the memory this token is in}
+    children:list of token {the ones with parent=this token}
+  end
+</code></pre>
+
+我们现在修改aplha-memory-activation和beta-memeory-left-activation程序提前设置这些列表。无论何时一个WME w被添加到alpha
+寄存器a中，我们添加a到w.alpha-mems.
+<pre><code>
+  procedure alpha-memory-activation (node: alpha-memory, w: WME)
+  {revisedfrom version on page 21}
+     insert w at the head of node.items
+     insert node at the head of w.alpha-mems {for tree-basedremoval}
+     for each child in node.successors do right-activation (child, w)
+  end
+</code></pre>
+
+相似地，无论何时一个新的token t=<t,w>被添加到beta寄存器，我们添加tok到t.children和w.tokens。我们也在token上填充新节点
+属性。为了简化我们的伪代码，定义一个helper函数make-token会方便一点，它构建一个新的token并初始化它的变量属性作为基于树
+的删除的必备之选。虽然我们把这个作为一个独立的函数，但正常情况下它在代码使用inline会更高效。
+<pre><code>
+  function make-token (node: rete-node, parent: token, w: wme)
+  returning token
+    tok =allocate-memory()
+    tok.parent = parent
+    tok.wme = w
+    tok.node = node {for tree-based removal}
+    tok.children =nil {for tree-based removal}
+    insert tok at the head of parent.children {for tree-based removal}
+    insert tok at the head of w.tokens {for tree-based removal}
+    return tok
+  end
+  
+  procedure beta-memory-left-activation (node: beta-memory, t: token, w: WME)
+  {revised from version on page 23}
+    new-token = make-token (node, t, w)
+    insert new-token at the head of node.items
+    for each childin node.children do left-activation (child, new-token)
+  end
+</code></pre>
+
+现在，删除一个WME，我们仅从包含它的每个alpha寄存器中删除它（这些alpha寄存器现在很方便在一个列表上）并调用helper子程序
+delete-token-and-descendents去删除包含它的所有token（包含它的所有必要的根token也很方便在一个列表中）：
+<pre><code>
+  procedure remove-wme (w: WME)
+    for each am in w.alpha-mems do remove w from the list am.items
+    while w.tokens !=nil do
+       delete-token-and-descendents (the first item on w.tokens)
+  end
+</code></pre>
+
+注意w.tokens上使用的是while循环而不是for循环。for循环在这里并不安全，因为每次调用delete-token-and-descendents会破坏性
+地修改w.tokens列表因为它要释放token数据结构使用的内存空间。for循环会持有一个指进它运行的列表的中间位置，并且这个指针
+可能对这个破坏性的修改变得无效。
+
+这个帮助类子程序delete-token-and-descendents删除一个token和它的整个派生树。为了简化，这里的伪代码是递归的；实际的实现
+可以使用非递归树遍历方法会更快一点。
+<pre><code>
+  procedure  delete-token-and-descendents (tok: token)
+    while tok.children !=nil do
+      delete-token-and-descendents (the first item on tok.children)
+    remove tok from the list tok.node.items
+    remove tok from the list tok.wme.tokens
+    remove tok from the list tok.parent.children
+    deallocate memory for tok
+  end
+</code></pre>
+
+###2.5.1 列表实现
